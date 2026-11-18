@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SwiftRide - Admin Control Panel</title>
+  
+  <!-- Bootstrap 5, FontAwesome & SweetAlert2 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <!-- Chart.js for Admin Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Leaflet Free Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root {
+      --primary: #facc15;
+      --primary-dark: #eab308;
+      --dark: #111827;
+      --bg-light: #f3f4f6;
+      --success: #10b981;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+    body { margin: 0; background-color: var(--bg-light); color: var(--dark); padding-bottom: 70px; }
+
+    .app-header {
+      background: var(--dark); color: #fff; padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+    .brand-title { font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: var(--primary); }
+    .brand-title img { width: 28px; height: 28px; border-radius: 6px; background: #fff; padding: 2px; }
+
+    .app-container { max-width: 900px; margin: 0 auto; padding: 12px; }
+    .card-box {
+      background: #fff; border-radius: 16px; padding: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 14px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .btn-brand {
+      background: var(--primary); color: var(--dark); font-weight: 700;
+      border: none; border-radius: 12px; padding: 12px 18px; width: 100%;
+    }
+    .btn-brand:hover { background: var(--primary-dark); }
+
+    /* Admin Stats Grid */
+    .admin-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+    @media (min-width: 768px) { .admin-stats-grid { grid-template-columns: repeat(4, 1fr); } }
+    .stat-box { background: #fff; border-radius: 14px; padding: 14px; border: 1px solid #e5e7eb; text-align: center; }
+    .stat-box h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 2px; }
+
+    #adminMap { width: 100%; height: 300px; border-radius: 14px; margin-bottom: 14px; border: 2px solid #e5e7eb; }
+
+    /* Bottom Navigation for Admin */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; background: #fff;
+      border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around;
+      padding: 8px 0; z-index: 1000;
+    }
+    .nav-item-btn {
+      background: none; border: none; color: #6b7280; font-size: 0.72rem; font-weight: 600;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .nav-item-btn i { font-size: 1.1rem; }
+    .nav-item-btn.active { color: var(--dark); font-weight: 800; }
+    .nav-item-btn.active i { color: var(--primary-dark); }
+
+    .hidden-section { display: none !important; }
+    .table-responsive { font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header class="app-header">
+    <div class="brand-title">
+      <img src="https://cdn-icons-png.flaticon.com/512/3198/3198336.png" alt="Logo" />
+      <span>SwiftRide Admin Panel</span>
+    </div>
+    <div id="headerAdminBadge" class="hidden-section">
+      <span class="badge bg-warning text-dark me-1" id="adminUserLabel">Admin</span>
+      <button class="btn btn-sm btn-outline-light py-0 px-2" onclick="logoutAdmin()"><i class="fas fa-sign-out-alt"></i></button>
+    </div>
+  </header>
+
+  <div class="app-container">
+
+    <!-- ==================== 1. ADMIN LOGIN SECTION ==================== -->
+    <div id="adminLoginSection">
+      <div class="card-box text-center" style="max-width: 400px; margin: 40px auto;">
+        <i class="fas fa-user-shield fa-3x text-warning mb-2"></i>
+        <h4 class="fw-bold mb-1">Admin Portal</h4>
+        <p class="text-muted small mb-3">Secure Management Dashboard</p>
+        
+        <form onsubmit="handleAdminLogin(event)" class="text-start">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Admin Username</label>
+            <input type="text" id="adminUser" class="form-control rounded-3" placeholder="e.g. admin" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Password</label>
+            <input type="password" id="adminPass" class="form-control rounded-3" placeholder="Enter admin password" required />
+          </div>
+          <button type="submit" class="btn-brand">Secure Login</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ==================== 2. ADMIN DASHBOARD ==================== -->
+    <div id="adminDashboardSection" class="hidden-section">
+      <h5 class="fw-bold mb-3"><i class="fas fa-chart-line text-warning me-1"></i> System Overview</h5>
+      
+      <div class="admin-stats-grid">
+        <div class="stat-box"><small class="text-muted fw-bold">Total Rides</small><h3 id="statTotalRides">0</h3></div>
+        <div class="stat-box"><small class="text-muted fw-bold">Today Revenue</small><h3 class="text-success">₹<span id="statTodayRev">0</span></h3></div>
+        <div class="stat-box"><small class="text-muted fw-bold">Total Drivers</small><h3 class="text-primary"><span id="statTotalDrv">0</span></h3></div>
+        <div class="stat-box"><small class="text-muted fw-bold">Commission</small><h3 class="text-warning">₹<span id="statCommission">0</span></h3></div>
+      </div>
+
+      <!-- Charts & Map -->
+      <div class="card-box">
+        <h6 class="fw-bold mb-2">Revenue & Rides Chart</h6>
+        <canvas id="adminChart" height="120"></canvas>
+      </div>
+
+      <div class="card-box">
+        <h6 class="fw-bold mb-2"><i class="fas fa-map-marked-alt text-warning me-1"></i> Live Active Drivers Map</h6>
+        <div id="adminMap"></div>
+      </div>
+    </div>
+
+    <!-- ==================== 3. DRIVER MANAGEMENT ==================== -->
+    <div id="adminDriversSection" class="hidden-section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">Driver Management</h5>
+        <button class="btn btn-sm btn-dark rounded-pill" onclick="loadDriversList()"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </div>
+      <div class="card-box table-responsive" id="driversTableContainer">
+        <p class="text-center text-muted">Loading drivers...</p>
+      </div>
+    </div>
+
+    <!-- ==================== 4. CUSTOMER MANAGEMENT ==================== -->
+    <div id="adminCustomersSection" class="hidden-section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">Customer Management</h5>
+        <button class="btn btn-sm btn-dark rounded-pill" onclick="loadCustomersList()"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </div>
+      <div class="card-box table-responsive" id="customersTableContainer">
+        <p class="text-center text-muted">Loading customers...</p>
+      </div>
+    </div>
+
+    <!-- ==================== 5. FARE & APP SETTINGS ==================== -->
+    <div id="adminSettingsSection" class="hidden-section">
+      <div class="card-box">
+        <h5 class="fw-bold mb-3"><i class="fas fa-rupee-sign text-warning me-1"></i> Fare Settings</h5>
+        <form onsubmit="handleUpdateFare(event)">
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label small fw-bold">Vehicle Type</label><select id="fareVehType" class="form-select form-select-sm"><option value="Bike">Bike</option><option value="Scooter">Scooter</option></select></div>
+            <div class="col-6"><label class="form-label small fw-bold">Base Fare (₹)</label><input type="number" id="fareBase" class="form-control form-control-sm" value="20" required /></div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6"><label class="form-label small fw-bold">Per KM Rate (₹)</label><input type="number" id="fareKm" class="form-control form-control-sm" value="8" required /></div>
+            <div class="col-6"><label class="form-label small fw-bold">Commission (%)</label><input type="number" id="fareComm" class="form-control form-control-sm" value="15" required /></div>
+          </div>
+          <button type="submit" class="btn-brand btn-sm">Save Fare Settings</button>
+        </form>
+      </div>
+
+      <div class="card-box text-center">
+        <h6 class="fw-bold mb-2">Export Reports & Logs</h6>
+        <button class="btn btn-dark btn-sm rounded-pill px-4" onclick="exportReportsCsv()"><i class="fas fa-download me-1"></i> Download CSV Report</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAVIGATION FOR ADMIN -->
+  <nav class="bottom-nav hidden-section" id="adminBottomNav">
+    <button class="nav-item-btn active" id="navDashboard" onclick="switchAdminTab('dashboard')"><i class="fas fa-chart-pie"></i><span>Dashboard</span></button>
+    <button class="nav-item-btn" id="navDrivers" onclick="switchAdminTab('drivers')"><i class="fas fa-motorcycle"></i><span>Drivers</span></button>
+    <button class="nav-item-btn" id="navCustomers" onclick="switchAdminTab('customers')"><i class="fas fa-users"></i><span>Customers</span></button>
+    <button class="nav-item-btn" id="navSettings" onclick="switchAdminTab('settings')"><i class="fas fa-cogs"></i><span>Settings</span></button>
+  </nav>
+
+  <script>
+    /**
+     * ========================================================================
+     * ADMIN PANEL JAVASCRIPT ENGINE
+     * ========================================================================
+     */
+    const CONFIG = {
+      API_URL: "https://script.google.com/macros/s/AKfycbzEzaQgXO2LxQKzcNAwJZkmADVLKR3nHxUVNfyTwOPaSJCXrD2GQPzs9bvdfhnVR_JU/exec"
+    };
+
+    let adminSession = null;
+    let adminMap = null;
+    let chartInstance = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const saved = localStorage.getItem("btx_admin");
+      if (saved) {
+        adminSession = JSON.parse(saved);
+        showAdminAuthenticatedUI();
+      }
+    });
+
+    async function callApi(payload) {
+      if (CONFIG.API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
+        Swal.fire("Setup Required", "कृपया admin.html में अपना Google Apps Script Web App URL डालें!", "warning");
+        return { success: false };
+      }
+      try {
+        const res = await fetch(CONFIG.API_URL, { method: "POST", body: JSON.stringify(payload) });
+        return await res.json();
+      } catch (err) {
+        return { success: false, message: "Network error." };
+      }
+    }
+
+    async function handleAdminLogin(e) {
+      e.preventDefault();
+      Swal.showLoading();
+      const res = await callApi({
+        action: "adminLogin",
+        username: document.getElementById("adminUser").value,
+        password: document.getElementById("adminPass").value
+      });
+      Swal.close();
+
+      if (res.success) {
+        adminSession = res.data;
+        localStorage.setItem("btx_admin", JSON.stringify(adminSession));
+        showAdminAuthenticatedUI();
+      } else {
+        Swal.fire("Login Failed", res.message, "error");
+      }
+    }
+
+    function logoutAdmin() {
+      localStorage.removeItem("btx_admin");
+      location.reload();
+    }
+
+    function showAdminAuthenticatedUI() {
+      document.getElementById("adminLoginSection").classList.add("hidden-section");
+      document.getElementById("headerAdminBadge").classList.remove("hidden-section");
+      document.getElementById("adminBottomNav").classList.remove("hidden-section");
+      document.getElementById("adminUserLabel").innerText = adminSession.username;
+
+      switchAdminTab("dashboard");
+    }
+
+    function switchAdminTab(tab) {
+      ["dashboard", "drivers", "customers", "settings"].forEach(p => {
+        document.getElementById("admin" + p.charAt(0).toUpperCase() + p.slice(1) + "Section").classList.toggle("hidden-section", p !== tab);
+        document.getElementById("nav" + p.charAt(0).toUpperCase() + p.slice(1)).classList.toggle("active", p === tab);
+      });
+
+      if (tab === "dashboard") { loadAdminDashboard(); }
+      if (tab === "drivers") { loadDriversList(); }
+      if (tab === "customers") { loadCustomersList(); }
+      if (tab === "dashboard" && adminMap) setTimeout(() => adminMap.invalidateSize(), 200);
+    }
+
+    // ==================== DASHBOARD STATS & MAP ====================
+    async function loadAdminDashboard() {
+      const res = await callApi({ action: "getAdminDashboard", token: adminSession.token });
+      if (!res.success) {
+        if (res.message.includes("Unauthorized")) logoutAdmin();
+        return;
+      }
+
+      const d = res.data;
+      document.getElementById("statTotalRides").innerText = d.totalRides;
+      document.getElementById("statTodayRev").innerText = d.todayRevenue;
+      document.getElementById("statTotalDrv").innerText = d.approvedDrivers;
+      document.getElementById("statCommission").innerText = d.totalCommission;
+
+      // Render Chart
+      renderAdminChart(d.todayRevenue, d.totalRevenue);
+
+      // Render Map & Markers
+      if (!adminMap) {
+        adminMap = L.map("adminMap").setView([25.5941, 85.1376], 13);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(adminMap);
+      }
+
+      if (d.activeDriverLocations) {
+        d.activeDriverLocations.forEach(drv => {
+          L.marker([drv.lat, drv.lng]).addTo(adminMap).bindPopup(`Captain: ${drv.name}`);
+        });
+      }
+    }
+
+    function renderAdminChart(todayRev, totalRev) {
+      const ctx = document.getElementById("adminChart").getContext("2d");
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["Today Revenue", "Total Revenue"],
+          datasets: [{
+            label: "Revenue (₹)",
+            data: [todayRev, totalRev],
+            backgroundColor: ["#facc15", "#111827"]
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    // ==================== DRIVER MANAGEMENT ====================
+    async function loadDriversList() {
+      const container = document.getElementById("driversTableContainer");
+      container.innerHTML = `<div class="text-center py-3"><div class="spinner-border text-warning"></div></div>`;
+
+      const res = await callApi({ action: "getAllDrivers", token: adminSession.token });
+      if (!res.success || !res.data) { container.innerHTML = `<p class="text-center text-muted">Failed to load drivers.</p>`; return; }
+
+      container.innerHTML = `
+        <table class="table table-striped align-middle">
+          <thead><tr><th>Name</th><th>Vehicle</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            ${res.data.map(drv => `
+              <tr>
+                <td><strong>${drv.name}</strong><br/><small>${drv.mobile}</small></td>
+                <td>${drv.vehicle?.type || 'Bike'}<br/><small>${drv.vehicle?.number || ''}</small></td>
+                <td><span class="badge bg-${drv.approvalStatus === 'APPROVED' ? 'success' : 'warning'}">${drv.approvalStatus}</span></td>
+                <td>
+                  ${drv.approvalStatus === 'PENDING' ? `<button class="btn btn-sm btn-success me-1" onclick="changeDriverStatus('${drv.driverId}', 'approveDriver')">Approve</button><button class="btn btn-sm btn-danger" onclick="changeDriverStatus('${drv.driverId}', 'rejectDriver')">Reject</button>` : `<button class="btn btn-sm btn-outline-danger" onclick="changeDriverStatus('${drv.driverId}', 'suspendDriver')">Suspend</button>`}
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function changeDriverStatus(driverId, actionName) {
+      const res = await callApi({ action: actionName, driverId, token: adminSession.token });
+      if (res.success) {
+        Swal.fire("Success", res.message, "success");
+        loadDriversList();
+      } else {
+        Swal.fire("Error", res.message, "error");
+      }
+    }
+
+    // ==================== CUSTOMER MANAGEMENT ====================
+    async function loadCustomersList() {
+      const container = document.getElementById("customersTableContainer");
+      container.innerHTML = `<div class="text-center py-3"><div class="spinner-border text-warning"></div></div>`;
+
+      const res = await callApi({ action: "getAllCustomers", token: adminSession.token });
+      if (!res.success || !res.data) { container.innerHTML = `<p class="text-center text-muted">Failed to load customers.</p>`; return; }
+
+      container.innerHTML = `
+        <table class="table table-striped align-middle">
+          <thead><tr><th>Name</th><th>Mobile</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            ${res.data.map(c => `
+              <tr>
+                <td><strong>${c.name}</strong><br/><small>${c.email || ''}</small></td>
+                <td>${c.mobile}</td>
+                <td><span class="badge bg-${c.status === 'ACTIVE' ? 'success' : 'danger'}">${c.status}</span></td>
+                <td>
+                  <button class="btn btn-sm btn-outline-${c.status === 'ACTIVE' ? 'danger' : 'success'}" onclick="toggleCustomer('${c.id}', '${c.status === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE'}')">${c.status === 'ACTIVE' ? 'Block' : 'Unblock'}</button>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function toggleCustomer(customerId, status) {
+      const res = await callApi({ action: "toggleCustomerStatus", customerId, status, token: adminSession.token });
+      if (res.success) {
+        Swal.fire("Updated", res.message, "success");
+        loadCustomersList();
+      }
+    }
+
+    // ==================== FARE SETTINGS & EXPORT ====================
+    async function handleUpdateFare(e) {
+      e.preventDefault();
+      Swal.showLoading();
+      const res = await callApi({
+        action: "updateFareSettings",
+        vehicleType: document.getElementById("fareVehType").value,
+        baseFare: document.getElementById("fareBase").value,
+        perKmRate: document.getElementById("fareKm").value,
+        commissionPercent: document.getElementById("fareComm").value,
+        token: adminSession.token
+      });
+      Swal.close();
+      if (res.success) {
+        Swal.fire("Saved!", res.message, "success");
+      } else {
+        Swal.fire("Error", res.message, "error");
+      }
+    }
+
+    async function exportReportsCsv() {
+      const res = await callApi({ action: "getReports", token: adminSession.token });
+      if (!res.success || !res.data) return Swal.fire("Error", "Could not export reports.", "error");
+
+      const earnings = res.data.earnings || [];
+      let csvContent = "data:text/csv;charset=utf-8,Earning_ID,Driver_ID,Booking_ID,Total_Fare,Commission,Net_Earning,Date\n";
+      earnings.forEach(row => { csvContent += row.join(",") + "\n"; });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "SwiftRide_Earnings_Report.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
