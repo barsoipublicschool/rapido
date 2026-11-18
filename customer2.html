@@ -496,15 +496,15 @@
       }
     }
 
-    // ==================== GOOGLE MAPS LIKE STYLE & SATELLITE TOGGLE ====================
+    // ==================== ORIGINAL OPENSTREETMAP & SATELLITE TOGGLE ====================
     function initMap() {
       if (mapInstance) return;
       mapInstance = L.map("mapContainer", { zoomControl: false }).setView([CONFIG.DEFAULT_CENTER.lat, CONFIG.DEFAULT_CENTER.lng], 14);
       L.control.zoom({ position: 'topleft' }).addTo(mapInstance);
 
-      // Google Maps-like Clean Light Tiles (CartoDB Positron)
-      standardTileLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        attribution: "© OpenStreetMap contributors, © CARTO",
+      // Original Clean OpenStreetMap Standard Tiles
+      standardTileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap",
         maxZoom: 19
       });
 
@@ -514,7 +514,7 @@
         maxZoom: 19
       });
 
-      // Add standard Google Maps-like style by default
+      // Add standard OpenStreetMap tiles by default
       standardTileLayer.addTo(mapInstance);
 
       // Default pickup marker set so user can drag immediately even if GPS is slow
