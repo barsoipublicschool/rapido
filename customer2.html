@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SwiftRide - Customer Bike Taxi App</title>
+  
+  <!-- Bootstrap 5, FontAwesome & SweetAlert2 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <!-- Leaflet Free Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root {
+      --primary: #facc15;
+      --primary-dark: #eab308;
+      --dark: #111827;
+      --dark-card: #1f2937;
+      --bg-light: #f3f4f6;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --success: #10b981;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { margin: 0; background-color: var(--bg-light); color: var(--text-main); padding-bottom: 75px; }
+
+    .app-header {
+      background: var(--dark); color: #fff; padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+    .brand-title { font-weight: 800; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; color: var(--primary); }
+    .brand-title img { width: 30px; height: 30px; border-radius: 6px; background: #fff; padding: 2px; }
+
+    .app-container { max-width: 540px; margin: 0 auto; padding: 12px; }
+    .card-box {
+      background: #fff; border-radius: 16px; padding: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 14px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .btn-brand {
+      background: var(--primary); color: var(--dark); font-weight: 700;
+      border: none; border-radius: 12px; padding: 12px 18px; width: 100%;
+      box-shadow: 0 4px 10px rgba(250, 204, 21, 0.35);
+    }
+    .btn-brand:hover { background: var(--primary-dark); }
+    .btn-dark-custom { background: var(--dark); color: #fff; border-radius: 12px; font-weight: 600; padding: 11px; width: 100%; border: none; }
+
+    #mapContainer {
+      width: 100%; height: 300px; border-radius: 16px;
+      overflow: hidden; border: 2px solid #e5e7eb; position: relative; z-index: 1;
+    }
+
+    .loc-input-group { position: relative; margin-bottom: 10px; }
+    .loc-input-group input {
+      padding-left: 38px; padding-right: 40px; border-radius: 12px;
+      height: 46px; border: 1.5px solid #d1d5db; font-size: 0.92rem;
+    }
+    .loc-input-group input:focus { border-color: var(--dark); box-shadow: none; }
+    .loc-icon-left { position: absolute; left: 13px; top: 14px; font-size: 1rem; }
+    .loc-btn-right {
+      position: absolute; right: 8px; top: 7px;
+      background: #f3f4f6; border: none; border-radius: 8px; width: 32px; height: 32px; color: var(--dark);
+    }
+    .suggestions-box {
+      position: absolute; top: 48px; left: 0; right: 0;
+      background: #fff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      z-index: 1050; max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; display: none;
+    }
+    .suggestion-item { padding: 10px 14px; border-bottom: 1px solid #f3f4f6; font-size: 0.86rem; cursor: pointer; }
+    .suggestion-item:hover { background: #fef9c3; }
+
+    .vehicle-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+    .vehicle-card {
+      border: 2px solid #e5e7eb; border-radius: 14px; padding: 12px;
+      text-align: center; cursor: pointer; background: #fff;
+    }
+    .vehicle-card.active { border-color: var(--dark); background: #fefce8; }
+    .vehicle-card i { font-size: 1.8rem; color: var(--dark); margin-bottom: 5px; }
+    .fare-badge { font-size: 1.15rem; font-weight: 800; color: var(--dark); }
+
+    .otp-pill {
+      background: var(--dark); color: var(--primary); font-weight: 800;
+      letter-spacing: 3px; padding: 6px 14px; border-radius: 10px; font-size: 1.1rem;
+    }
+    .driver-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
+
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; background: #fff;
+      border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around;
+      padding: 8px 0; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+    }
+    .nav-item-btn {
+      background: none; border: none; color: var(--text-muted); font-size: 0.75rem; font-weight: 600;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .nav-item-btn i { font-size: 1.2rem; }
+    .nav-item-btn.active { color: var(--dark); font-weight: 800; }
+    .nav-item-btn.active i { color: var(--primary-dark); }
+
+    .hidden-section { display: none !important; }
+    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+    .st-SEARCHING { background: #fef3c7; color: #b45309; }
+    .st-ACCEPTED, .st-ARRIVED { background: #dbeafe; color: #1d4ed8; }
+    .st-STARTED { background: #d1fae5; color: #047857; }
+    .st-COMPLETED { background: #dcfce7; color: #15803d; }
+    .st-CANCELLED { background: #fee2e2; color: #b91c1c; }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header class="app-header">
+    <div class="brand-title">
+      <img id="appLogo" src="https://cdn-icons-png.flaticon.com/512/3198/3198336.png" alt="Logo" />
+      <span id="appName">SwiftRide</span>
+    </div>
+    <div id="headerUserBadge" class="hidden-section">
+      <span class="badge bg-warning text-dark me-1" id="headerUserName">User</span>
+      <button class="btn btn-sm btn-outline-light py-0 px-2" onclick="logoutCustomer()"><i class="fas fa-sign-out-alt"></i></button>
+    </div>
+  </header>
+
+  <div class="app-container">
+
+    <!-- ==================== 1. AUTHENTICATION SECTION ==================== -->
+    <div id="authSection">
+      <div class="card-box text-center">
+        <h4 class="fw-bold mb-1">Welcome Rider! 🏍️</h4>
+        <p class="text-muted small mb-3">Fast, Affordable & Safe Bike Taxi at your doorstep</p>
+        
+        <ul class="nav nav-pills nav-fill mb-3 bg-light p-1 rounded-3">
+          <li class="nav-item"><button class="nav-link active fw-bold text-dark" id="tabLoginBtn" onclick="switchAuthTab('login')">Login</button></li>
+          <li class="nav-item"><button class="nav-link fw-bold text-dark" id="tabRegBtn" onclick="switchAuthTab('register')">Register</button></li>
+        </ul>
+
+        <!-- LOGIN FORM -->
+        <form id="loginForm" onsubmit="handleCustomerLogin(event)" class="text-start">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Mobile Number</label>
+            <input type="tel" id="loginMobile" class="form-control rounded-3" placeholder="Enter 10-digit mobile" maxlength="10" required />
+          </div>
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Login Method</label>
+            <select id="loginType" class="form-select rounded-3 mb-2" onchange="toggleLoginInput()">
+              <option value="password">Password</option>
+              <option value="pin">4-Digit Quick PIN</option>
+            </select>
+            <input type="password" id="loginSecret" class="form-control rounded-3" placeholder="Enter your Password" required />
+          </div>
+          <button type="submit" class="btn-brand mt-3"><i class="fas fa-sign-in-alt me-1"></i> Login Now</button>
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form id="registerForm" onsubmit="handleCustomerRegister(event)" class="text-start hidden-section">
+          <div class="mb-2"><label class="form-label small fw-bold">Full Name *</label><input type="text" id="regName" class="form-control rounded-3" placeholder="e.g. Rahul Kumar" required /></div>
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Mobile Number *</label>
+            <div class="input-group">
+              <input type="tel" id="regMobile" class="form-control" placeholder="10-digit mobile" maxlength="10" required />
+              <button type="button" class="btn btn-dark" onclick="sendMockOTP()">Send OTP</button>
+            </div>
+          </div>
+          <div class="mb-2 hidden-section" id="otpVerifyGroup">
+            <label class="form-label small fw-bold text-success">Enter 4-Digit OTP *</label>
+            <input type="number" id="regOtpInput" class="form-control border-success" placeholder="Enter OTP sent to mobile" />
+          </div>
+          <div class="mb-2"><label class="form-label small fw-bold">Email Address</label><input type="email" id="regEmail" class="form-control rounded-3" placeholder="optional@email.com" /></div>
+          <div class="row g-2 mb-3">
+            <div class="col-7"><label class="form-label small fw-bold">Create Password *</label><input type="password" id="regPassword" class="form-control rounded-3" placeholder="Min 6 chars" required /></div>
+            <div class="col-5"><label class="form-label small fw-bold">4-Digit PIN</label><input type="number" id="regPin" class="form-control rounded-3" placeholder="e.g. 1234" /></div>
+          </div>
+          <button type="submit" class="btn-brand"><i class="fas fa-user-plus me-1"></i> Verify & Register</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ==================== 2. HOME / BOOKING & LIVE RIDE SECTION ==================== -->
+    <div id="homeSection" class="hidden-section">
+      
+      <!-- MAP VIEW -->
+      <div id="mapContainer" class="mb-3"></div>
+
+      <!-- ACTIVE RIDE TRACKING CARD -->
+      <div id="activeRideCard" class="card-box border-warning border-2 hidden-section">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="status-badge st-SEARCHING" id="liveRideStatusBadge">SEARCHING DRIVER...</span>
+          <span class="small text-muted fw-bold" id="liveBookingId">#BKG-000</span>
+        </div>
+
+        <div id="searchingBox" class="text-center py-3">
+          <div class="spinner-border text-warning mb-2" role="status"></div>
+          <h6 class="fw-bold mb-1">Finding nearest Captain for you...</h6>
+          <p class="small text-muted mb-2">Please wait while nearby drivers review your request.</p>
+          <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="cancelActiveRide()">Cancel Request</button>
+        </div>
+
+        <div id="driverAssignedBox" class="hidden-section">
+          <div class="d-flex align-items-center justify-content-between bg-light p-2 rounded-3 mb-2">
+            <div class="d-flex align-items-center gap-2">
+              <img id="drvPhoto" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="driver-avatar" />
+              <div>
+                <h6 class="fw-bold mb-0" id="drvName">Driver Name</h6>
+                <div class="small text-muted"><i class="fas fa-star text-warning"></i> <span id="drvRating">5.0</span> • <span id="drvVehicleModel">Bike</span></div>
+                <span class="badge bg-dark text-warning mt-1" id="drvVehicleNo">BR-01-XX-0000</span>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="small text-muted">Start OTP</div>
+              <div class="otp-pill" id="liveRideOtp">0000</div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center small bg-warning-subtle p-2 rounded-3 mb-2">
+            <span><i class="fas fa-clock me-1"></i> ETA: <strong id="driverEtaText">Calculating...</strong></span>
+            <span>Fare: <strong class="fs-6">₹<span id="liveRideFare">0</span></strong></span>
+          </div>
+
+          <div class="row g-2">
+            <div class="col-6"><a id="callDriverBtn" href="tel:" class="btn btn-success w-100 rounded-3 fw-bold"><i class="fas fa-phone-alt me-1"></i> Call Driver</a></div>
+            <div class="col-6"><button id="cancelRideBtn" class="btn btn-outline-danger w-100 rounded-3 fw-bold" onclick="cancelActiveRide()"><i class="fas fa-times me-1"></i> Cancel</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NEW RIDE BOOKING FORM -->
+      <div id="bookingFormCard" class="card-box">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <h6 class="fw-bold mb-0"><i class="fas fa-route text-warning me-1"></i> Where do you want to go?</h6>
+          <span class="badge bg-dark text-warning" id="nearbyCapsCount"><i class="fas fa-motorcycle"></i> 0 Nearby</span>
+        </div>
+        <p class="text-muted mb-2" style="font-size:0.75rem;"><i class="fas fa-hand-pointer text-primary"></i> Tip: Drag Green (Pickup) or Red (Drop) marker with your finger!</p>
+        
+        <!-- Pickup Input -->
+        <div class="loc-input-group">
+          <i class="fas fa-dot-circle text-success loc-icon-left"></i>
+          <input type="text" id="pickupInput" class="form-control" placeholder="Enter Pickup Location" oninput="searchLocation(this.value, 'pickup')" />
+          <button type="button" class="loc-btn-right" title="Use Current GPS" onclick="detectCurrentLocation(true)"><i class="fas fa-crosshairs"></i></button>
+          <div id="pickupSuggestions" class="suggestions-box"></div>
+        </div>
+
+        <!-- Drop Input -->
+        <div class="loc-input-group">
+          <i class="fas fa-map-marker-alt text-danger loc-icon-left"></i>
+          <input type="text" id="dropInput" class="form-control" placeholder="Enter Drop Destination" oninput="searchLocation(this.value, 'drop')" />
+          <div id="dropSuggestions" class="suggestions-box"></div>
+        </div>
+
+        <!-- Route Summary & Vehicle Selection -->
+        <div id="fareEstimateSection" class="hidden-section mt-3">
+          <div class="d-flex justify-content-between bg-light p-2 rounded-3 small fw-bold mb-2">
+            <span><i class="fas fa-road text-primary me-1"></i> Distance: <span id="estDistance">0</span> KM</span>
+            <span><i class="fas fa-stopwatch text-success me-1"></i> Time: <span id="estDuration">0</span> Mins</span>
+          </div>
+
+          <label class="small fw-bold text-muted">Select Vehicle Type</label>
+          <div class="vehicle-grid" id="vehicleOptionsGrid"></div>
+
+          <div class="mt-3">
+            <label class="small fw-bold text-muted">Payment Mode</label>
+            <select id="paymentMethodSelect" class="form-select rounded-3">
+              <option value="CASH">💵 Cash Payment after Ride</option>
+              <option value="ONLINE">💳 Online Payment (UPI / Card)</option>
+            </select>
+          </div>
+
+          <button type="button" class="btn-brand mt-3 fs-6" onclick="confirmAndBookRide()">
+            Book <span id="selectedVehicleLabel">Bike</span> • ₹<span id="selectedFareLabel">0</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 3. RIDE HISTORY SECTION ==================== -->
+    <div id="historySection" class="hidden-section">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="fw-bold mb-0">My Rides History</h5>
+        <button class="btn btn-sm btn-dark rounded-pill" onclick="loadCustomerHistory()"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </div>
+      <div id="historyListContainer"><p class="text-center text-muted py-4">Loading your rides...</p></div>
+    </div>
+
+    <!-- ==================== 4. PROFILE & SUPPORT SECTION ==================== -->
+    <div id="profileSection" class="hidden-section">
+      <div class="card-box text-center">
+        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" width="70" class="mb-2" />
+        <h5 class="fw-bold mb-0" id="profName">Customer Name</h5>
+        <p class="text-muted small mb-1" id="profMobile">+91-0000000000</p>
+        <span class="badge bg-success-subtle text-success" id="profId">CUST-ID</span>
+      </div>
+
+      <div class="card-box">
+        <h6 class="fw-bold mb-2"><i class="fas fa-headset text-warning me-1"></i> Help & Raise Complaint</h6>
+        <form onsubmit="handleComplaintSubmit(event)">
+          <div class="mb-2"><input type="text" id="compBookingId" class="form-control form-control-sm" placeholder="Booking ID (Optional)" /></div>
+          <div class="mb-2"><input type="text" id="compSubject" class="form-control form-control-sm" placeholder="Issue Subject (e.g. Overcharging, Delay)" required /></div>
+          <div class="mb-2"><textarea id="compDesc" class="form-control form-control-sm" rows="2" placeholder="Describe your issue..." required></textarea></div>
+          <button type="submit" class="btn-dark-custom btn-sm">Submit Complaint</button>
+        </form>
+        <hr />
+        <div class="small text-muted">
+          <div><i class="fas fa-phone me-1"></i> Helpline: <strong id="supportPhoneDisplay">+91-9876543210</strong></div>
+          <div><i class="fas fa-envelope me-1"></i> Email: <strong id="supportEmailDisplay">support@swiftride.example.com</strong></div>
+        </div>
+      </div>
+
+      <button class="btn btn-danger w-100 rounded-3 fw-bold" onclick="logoutCustomer()"><i class="fas fa-sign-out-alt me-1"></i> Logout Account</button>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="bottom-nav hidden-section" id="bottomNav">
+    <button class="nav-item-btn active" id="navHome" onclick="switchPage('home')"><i class="fas fa-motorcycle"></i><span>Book Ride</span></button>
+    <button class="nav-item-btn" id="navHistory" onclick="switchPage('history')"><i class="fas fa-history"></i><span>My Rides</span></button>
+    <button class="nav-item-btn" id="navProfile" onclick="switchPage('profile')"><i class="fas fa-user-circle"></i><span>Profile</span></button>
+  </nav>
+
+  <script>
+    const CONFIG = {
+      API_URL: "https://script.google.com/macros/s/AKfycbw-TNJ5cgis_GoUp_hNSNDxhof3LPsxnlW3yGAaDNEbffrs2dRWOnFKQLEfq472ospF/exec",
+      POLLING_INTERVAL_MS: 6000,
+      DEFAULT_CENTER: { lat: 25.5941, lng: 85.1376 }
+    };
+
+    let currentUser = null;
+    let appFares = [];
+    let selectedVehicle = null;
+    let mapInstance = null;
+    let pickupCoords = null;
+    let dropCoords = null;
+    let routeStats = { distanceKm: 0, durationMin: 0 };
+    let markers = { pickup: null, drop: null, driver: null, routeLayer: null, availableDrivers: [] };
+    let activeBookingId = null;
+    let pollingTimer = null;
+    let availableDriversInterval = null;
+    let generatedOtp = null;
+    let isInitialLocationSet = false;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      await loadAppConfig();
+      const savedUser = localStorage.getItem("btx_customer");
+      if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        showAuthenticatedUI();
+      }
+    });
+
+    async function callApi(payload) {
+      try {
+        const res = await fetch(CONFIG.API_URL, { method: "POST", body: JSON.stringify(payload) });
+        return await res.json();
+      } catch (err) {
+        return { success: false, message: "Network error. Please check your internet connection." };
+      }
+    }
+
+    async function loadAppConfig() {
+      const res = await callApi({ action: "getAppConfig" });
+      if (res.success && res.data) {
+        const s = res.data.settings || {};
+        if (s.Website_Name) document.getElementById("appName").innerText = s.Website_Name;
+        if (s.Website_Logo) document.getElementById("appLogo").src = s.Website_Logo;
+        if (s.Contact_Number) document.getElementById("supportPhoneDisplay").innerText = s.Contact_Number;
+        if (s.Support_Email) document.getElementById("supportEmailDisplay").innerText = s.Support_Email;
+        appFares = res.data.fares || [];
+      }
+    }
+
+    // ==================== AUTHENTICATION LOGIC ====================
+    function switchAuthTab(tab) {
+      document.getElementById("loginForm").classList.toggle("hidden-section", tab !== "login");
+      document.getElementById("registerForm").classList.toggle("hidden-section", tab !== "register");
+      document.getElementById("tabLoginBtn").classList.toggle("active", tab === "login");
+      document.getElementById("tabRegBtn").classList.toggle("active", tab === "register");
+    }
+
+    function toggleLoginInput() {
+      const type = document.getElementById("loginType").value;
+      const input = document.getElementById("loginSecret");
+      input.placeholder = type === "pin" ? "Enter 4-Digit PIN" : "Enter your Password";
+      input.maxLength = type === "pin" ? 4 : 50;
+    }
+
+    function sendMockOTP() {
+      const mobile = document.getElementById("regMobile").value.trim();
+      if (mobile.length !== 10) return Swal.fire("Invalid Mobile", "Please enter a valid 10-digit mobile number.", "error");
+      generatedOtp = Math.floor(1000 + Math.random() * 9000);
+      document.getElementById("otpVerifyGroup").classList.remove("hidden-section");
+      Swal.fire({
+        title: "OTP Sent!",
+        html: `Verification OTP for <b>${mobile}</b> is: <h3 class="text-primary mt-2">${generatedOtp}</h3><small class="text-muted">(Demo SMS Gateway Mode)</small>`,
+        icon: "info"
+      });
+    }
+
+    async function handleCustomerRegister(e) {
+      e.preventDefault();
+      const enteredOtp = document.getElementById("regOtpInput").value.trim();
+      if (!generatedOtp || enteredOtp != generatedOtp) {
+        return Swal.fire("OTP Error", "Please click 'Send OTP' and enter the correct 4-digit OTP.", "error");
+      }
+
+      Swal.showLoading();
+      const res = await callApi({
+        action: "customerRegister",
+        name: document.getElementById("regName").value,
+        mobile: document.getElementById("regMobile").value,
+        email: document.getElementById("regEmail").value,
+        password: document.getElementById("regPassword").value,
+        pin: document.getElementById("regPin").value
+      });
+
+      if (res.success) {
+        currentUser = res.data;
+        localStorage.setItem("btx_customer", JSON.stringify(currentUser));
+        Swal.fire("Success!", "Account created successfully!", "success");
+        showAuthenticatedUI();
+      } else {
+        Swal.fire("Registration Failed", res.message, "error");
+      }
+    }
+
+    async function handleCustomerLogin(e) {
+      e.preventDefault();
+      const mobile = document.getElementById("loginMobile").value.trim();
+      const type = document.getElementById("loginType").value;
+      const secret = document.getElementById("loginSecret").value;
+
+      Swal.showLoading();
+      const payload = { action: "customerLogin", mobile };
+      if (type === "pin") payload.pin = secret; else payload.password = secret;
+
+      const res = await callApi(payload);
+      if (res.success) {
+        currentUser = res.data;
+        localStorage.setItem("btx_customer", JSON.stringify(currentUser));
+        Swal.close();
+        showAuthenticatedUI();
+      } else {
+        Swal.fire("Login Failed", res.message, "error");
+      }
+    }
+
+    function logoutCustomer() {
+      localStorage.removeItem("btx_customer");
+      if (pollingTimer) clearInterval(pollingTimer);
+      if (availableDriversInterval) clearInterval(availableDriversInterval);
+      location.reload();
+    }
+
+    function showAuthenticatedUI() {
+      document.getElementById("authSection").classList.add("hidden-section");
+      document.getElementById("headerUserBadge").classList.remove("hidden-section");
+      document.getElementById("bottomNav").classList.remove("hidden-section");
+      
+      document.getElementById("headerUserName").innerText = currentUser.name.split(" ")[0];
+      document.getElementById("profName").innerText = currentUser.name;
+      document.getElementById("profMobile").innerText = currentUser.mobile;
+      document.getElementById("profId").innerText = currentUser.customerId;
+
+      switchPage("home");
+      initMap();
+      checkOngoingRide();
+    }
+
+    function switchPage(page) {
+      ["home", "history", "profile"].forEach(p => {
+        document.getElementById(p + "Section").classList.toggle("hidden-section", p !== page);
+        document.getElementById("nav" + p.charAt(0).toUpperCase() + p.slice(1)).classList.toggle("active", p === page);
+      });
+      if (page === "history") loadCustomerHistory();
+      if (page === "home" && mapInstance) {
+        setTimeout(() => mapInstance.invalidateSize(), 200);
+      }
+    }
+
+    // ==================== MAP, DRAGGABLE MARKERS & LIVE DRIVERS ====================
+    function initMap() {
+      if (mapInstance) return;
+      mapInstance = L.map("mapContainer").setView([CONFIG.DEFAULT_CENTER.lat, CONFIG.DEFAULT_CENTER.lng], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap"
+      }).addTo(mapInstance);
+
+      // Default pickup marker set so user can drag immediately even if GPS is slow
+      pickupCoords = { lat: CONFIG.DEFAULT_CENTER.lat, lng: CONFIG.DEFAULT_CENTER.lng };
+      setMapMarker("pickup", pickupCoords.lat, pickupCoords.lng, "Pickup Location (Drag me)");
+
+      detectCurrentLocation(false);
+      startAvailableDriversPolling();
+    }
+
+    function detectCurrentLocation(force = false) {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        if (isInitialLocationSet && !force) return;
+        isInitialLocationSet = true;
+
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        pickupCoords = { lat, lng };
+        mapInstance.setView([lat, lng], 15);
+        setMapMarker("pickup", lat, lng, "Pickup Location (Drag me)");
+        await reverseGeocode(lat, lng, "pickup");
+        fetchAvailableDriversOnMap();
+        if (dropCoords) calculateRouteAndFares();
+      });
+    }
+
+    function setMapMarker(type, lat, lng, title) {
+      const colors = { pickup: "#10b981", drop: "#ef4444", driver: "#facc15" };
+      const icons = { pickup: "fa-dot-circle", drop: "fa-map-marker-alt", driver: "fa-motorcycle" };
+      
+      const customIcon = L.divIcon({
+        html: `<div style="background:${colors[type]};color:#111;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,0.45);cursor:grab;"><i class="fas ${icons[type]} fs-6"></i></div>`,
+        className: "",
+        iconSize: [38, 38],
+        iconAnchor: [19, 19]
+      });
+
+      if (markers[type]) {
+        markers[type].setLatLng([lat, lng]);
+        return;
+      }
+
+      const isDraggable = (type === "pickup" || type === "drop");
+      markers[type] = L.marker([lat, lng], {
+        icon: customIcon,
+        draggable: isDraggable,
+        autoPan: true,
+        zIndexOffset: type === "pickup" ? 900 : 800
+      }).addTo(mapInstance).bindPopup(title);
+
+      if (isDraggable) {
+        markers[type].on("dragend", async (e) => {
+          const pos = e.target.getLatLng();
+          if (type === "pickup") {
+            pickupCoords = { lat: pos.lat, lng: pos.lng };
+            await reverseGeocode(pos.lat, pos.lng, "pickup");
+            fetchAvailableDriversOnMap();
+          } else if (type === "drop") {
+            dropCoords = { lat: pos.lat, lng: pos.lng };
+            await reverseGeocode(pos.lat, pos.lng, "drop");
+          }
+          if (pickupCoords && dropCoords) calculateRouteAndFares();
+        });
+      }
+    }
+
+    async function reverseGeocode(lat, lng, type) {
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        const d = await r.json();
+        const addr = d.display_name ? d.display_name.split(",").slice(0, 3).join(",") : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        document.getElementById(type + "Input").value = addr;
+      } catch {
+        document.getElementById(type + "Input").value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      }
+    }
+
+    function startAvailableDriversPolling() {
+      fetchAvailableDriversOnMap();
+      if (availableDriversInterval) clearInterval(availableDriversInterval);
+      availableDriversInterval = setInterval(fetchAvailableDriversOnMap, 7000);
+    }
+
+    async function fetchAvailableDriversOnMap() {
+      const center = pickupCoords || CONFIG.DEFAULT_CENTER;
+      const res = await callApi({ action: "findAvailableDrivers", lat: center.lat, lng: center.lng });
+      
+      if (markers.availableDrivers) {
+        markers.availableDrivers.forEach(m => mapInstance.removeLayer(m));
+      }
+      markers.availableDrivers = [];
+
+      if (res.success && res.data && Array.isArray(res.data)) {
+        document.getElementById("nearbyCapsCount").innerHTML = `<i class="fas fa-motorcycle"></i> ${res.data.length} Nearby`;
+        res.data.forEach(drv => {
+          const lat = parseFloat(drv.lat);
+          const lng = parseFloat(drv.lng);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const isScooter = (drv.vehicle?.type || "").toLowerCase().includes("scoot");
+            const driverIcon = L.divIcon({
+              html: `<div style="background:#111827;color:#facc15;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #facc15;box-shadow:0 3px 10px rgba(0,0,0,0.5);"><i class="fas ${isScooter ? 'fa-biking' : 'fa-motorcycle'}"></i></div>`,
+              className: "",
+              iconSize: [36, 36],
+              iconAnchor: [18, 18]
+            });
+            const m = L.marker([lat, lng], { icon: driverIcon, zIndexOffset: 1000 })
+              .addTo(mapInstance)
+              .bindPopup(`<b>🏍️ Captain: ${drv.name}</b><br/>Vehicle: ${drv.vehicle?.model || drv.vehicle?.type}<br/>Distance: ${drv.distanceKm} KM away`);
+            markers.availableDrivers.push(m);
+          }
+        });
+      }
+    }
+
+    let searchTimeout = null;
+    function searchLocation(query, type) {
+      clearTimeout(searchTimeout);
+      const box = document.getElementById(type + "Suggestions");
+      if (query.length < 3) { box.style.display = "none"; return; }
+
+      searchTimeout = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=in&limit=5&q=${encodeURIComponent(query)}`);
+          const places = await res.json();
+          box.innerHTML = "";
+          if (places.length === 0) { box.style.display = "none"; return; }
+
+          places.forEach(place => {
+            const div = document.createElement("div");
+            div.className = "suggestion-item";
+            div.innerHTML = `<i class="fas fa-map-pin text-muted me-2"></i>${place.display_name}`;
+            div.onclick = () => {
+              document.getElementById(type + "Input").value = place.display_name.split(",").slice(0, 3).join(",");
+              box.style.display = "none";
+              const coords = { lat: parseFloat(place.lat), lng: parseFloat(place.lon) };
+              if (type === "pickup") {
+                pickupCoords = coords;
+                setMapMarker("pickup", coords.lat, coords.lng, "Pickup Location (Drag me)");
+                fetchAvailableDriversOnMap();
+              } else {
+                dropCoords = coords;
+                setMapMarker("drop", coords.lat, coords.lng, "Drop Destination (Drag me)");
+              }
+              mapInstance.setView([coords.lat, coords.lng], 15);
+              if (pickupCoords && dropCoords) calculateRouteAndFares();
+            };
+            box.appendChild(div);
+          });
+          box.style.display = "block";
+        } catch (e) { console.error(e); }
+      }, 450);
+    }
+
+    async function calculateRouteAndFares() {
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${pickupCoords.lng},${pickupCoords.lat};${dropCoords.lng},${dropCoords.lat}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          const distKm = Math.max(0.5, Number((route.distance / 1000).toFixed(2)));
+          const durMin = Math.max(2, Math.ceil(route.duration / 60));
+          routeStats = { distanceKm: distKm, durationMin: durMin };
+
+          if (markers.routeLayer) mapInstance.removeLayer(markers.routeLayer);
+          markers.routeLayer = L.geoJSON(route.geometry, { style: { color: "#111827", weight: 5 } }).addTo(mapInstance);
+          mapInstance.fitBounds(markers.routeLayer.getBounds(), { padding: [30, 30] });
+
+          document.getElementById("estDistance").innerText = distKm;
+          document.getElementById("estDuration").innerText = durMin;
+          renderVehicleCards(distKm);
+          document.getElementById("fareEstimateSection").classList.remove("hidden-section");
+        }
+      } catch (e) {
+        Swal.fire("Route Error", "Could not calculate route between selected locations.", "error");
+      }
+    }
+
+    function renderVehicleCards(distKm) {
+      const grid = document.getElementById("vehicleOptionsGrid");
+      grid.innerHTML = "";
+      const hour = new Date().getHours();
+      const isNight = (hour >= 23 || hour < 5);
+
+      const list = appFares.length > 0 ? appFares : [
+        { vehicleType: "Bike", baseFare: 20, perKmRate: 8, minimumFare: 25, nightMultiplier: 1.2 },
+        { vehicleType: "Scooter", baseFare: 22, perKmRate: 9, minimumFare: 28, nightMultiplier: 1.2 }
+      ];
+
+      list.forEach((v, idx) => {
+        let raw = v.baseFare + (distKm * v.perKmRate);
+        if (isNight) raw *= (v.nightMultiplier || 1.2);
+        const fare = Math.max(Math.round(raw), v.minimumFare);
+
+        const card = document.createElement("div");
+        card.className = "vehicle-card" + (idx === 0 ? " active" : "");
+        card.innerHTML = `
+          <i class="fas ${v.vehicleType.toLowerCase().includes('scoot') ? 'fa-biking' : 'fa-motorcycle'}"></i>
+          <div class="fw-bold">${v.vehicleType}</div>
+          <div class="fare-badge">₹${fare}</div>
+          <small class="text-muted">${isNight ? 'Night Rate' : 'Fastest'}</small>
+        `;
+        card.onclick = () => {
+          document.querySelectorAll(".vehicle-card").forEach(c => c.classList.remove("active"));
+          card.classList.add("active");
+          selectVehicleOption(v.vehicleType, fare);
+        };
+        grid.appendChild(card);
+
+        if (idx === 0) selectVehicleOption(v.vehicleType, fare);
+      });
+    }
+
+    function selectVehicleOption(type, fare) {
+      selectedVehicle = { type, fare };
+      document.getElementById("selectedVehicleLabel").innerText = type;
+      document.getElementById("selectedFareLabel").innerText = fare;
+    }
+
+    // ==================== BOOKING & LIVE TRACKING POLLING ====================
+    async function confirmAndBookRide() {
+      if (!pickupCoords || !dropCoords || !selectedVehicle) {
+        return Swal.fire("Incomplete Details", "Please select both Pickup and Drop locations.", "warning");
+      }
+
+      Swal.fire({ title: "Booking your ride...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+      const res = await callApi({
+        action: "createBooking",
+        customerId: currentUser.customerId,
+        vehicleType: selectedVehicle.type,
+        pickupAddress: document.getElementById("pickupInput").value,
+        pickupLat: pickupCoords.lat,
+        pickupLng: pickupCoords.lng,
+        dropAddress: document.getElementById("dropInput").value,
+        dropLat: dropCoords.lat,
+        dropLng: dropCoords.lng,
+        distanceKm: routeStats.distanceKm,
+        durationMin: routeStats.durationMin,
+        estimatedFare: selectedVehicle.fare,
+        paymentMethod: document.getElementById("paymentMethodSelect").value
+      });
+
+      Swal.close();
+      if (res.success) {
+        activeBookingId = res.data.bookingId;
+        startLiveTrackingUI(res.data);
+      } else {
+        Swal.fire("Booking Failed", res.message, "error");
+      }
+    }
+
+    async function checkOngoingRide() {
+      const res = await callApi({ action: "getCustomerBookings", customerId: currentUser.customerId });
+      if (res.success && res.data) {
+        const ongoing = res.data.find(b => ["SEARCHING", "ACCEPTED", "ARRIVED", "STARTED"].includes(b.status));
+        if (ongoing) {
+          activeBookingId = ongoing.bookingId;
+          startLiveTrackingUI({ bookingId: ongoing.bookingId, status: ongoing.status, estimatedFare: ongoing.fare });
+        }
+      }
+    }
+
+    function startLiveTrackingUI(bookingData) {
+      document.getElementById("bookingFormCard").classList.add("hidden-section");
+      document.getElementById("activeRideCard").classList.remove("hidden-section");
+      document.getElementById("liveBookingId").innerText = "#" + bookingData.bookingId;
+      document.getElementById("liveRideFare").innerText = bookingData.estimatedFare || bookingData.fare;
+      if (bookingData.rideOtp) document.getElementById("liveRideOtp").innerText = bookingData.rideOtp;
+
+      if (pollingTimer) clearInterval(pollingTimer);
+      pollBookingStatus();
+      pollingTimer = setInterval(pollBookingStatus, CONFIG.POLLING_INTERVAL_MS);
+    }
+
+    async function pollBookingStatus() {
+      if (!activeBookingId) return;
+      const res = await callApi({ action: "getBookingStatus", bookingId: activeBookingId });
+      if (!res.success || !res.data) return;
+
+      const b = res.data;
+      const badge = document.getElementById("liveRideStatusBadge");
+      badge.innerText = b.status;
+      badge.className = `status-badge st-${b.status.split('_')[0]}`;
+      document.getElementById("liveRideOtp").innerText = b.rideOtp;
+
+      if (b.status === "SEARCHING") {
+        document.getElementById("searchingBox").classList.remove("hidden-section");
+        document.getElementById("driverAssignedBox").classList.add("hidden-section");
+      } else if (["ACCEPTED", "ARRIVED", "STARTED"].includes(b.status)) {
+        document.getElementById("searchingBox").classList.add("hidden-section");
+        document.getElementById("driverAssignedBox").classList.remove("hidden-section");
+        document.getElementById("cancelRideBtn").disabled = (b.status === "STARTED");
+
+        if (b.driver) {
+          document.getElementById("drvName").innerText = b.driver.name;
+          document.getElementById("drvRating").innerText = b.driver.rating;
+          document.getElementById("drvVehicleModel").innerText = b.driver.vehicle.model || b.driver.vehicle.type;
+          document.getElementById("drvVehicleNo").innerText = b.driver.vehicle.number || "APPROVED";
+          if (b.driver.photo) document.getElementById("drvPhoto").src = b.driver.photo;
+          document.getElementById("callDriverBtn").href = "tel:" + b.driver.mobile;
+
+          if (b.driver.lat && b.driver.lng) {
+            setMapMarker("driver", parseFloat(b.driver.lat), parseFloat(b.driver.lng), `Captain: ${b.driver.name}`);
+            document.getElementById("driverEtaText").innerText = b.status === "STARTED" ? "On the way to Drop" : "Arriving soon";
+          }
+        }
+      } else if (b.status === "COMPLETED") {
+        clearInterval(pollingTimer);
+        resetBookingScreen();
+        handleRideCompletedFlow(b);
+      } else if (b.status.startsWith("CANCELLED")) {
+        clearInterval(pollingTimer);
+        resetBookingScreen();
+        Swal.fire("Ride Cancelled", "This ride was cancelled.", "info");
+      }
+    }
+
+    function resetBookingScreen() {
+      activeBookingId = null;
+      document.getElementById("activeRideCard").classList.add("hidden-section");
+      document.getElementById("bookingFormCard").classList.remove("hidden-section");
+      if (markers.driver) { mapInstance.removeLayer(markers.driver); markers.driver = null; }
+    }
+
+    async function cancelActiveRide() {
+      const confirm = await Swal.fire({
+        title: "Cancel this ride?",
+        text: "Are you sure you want to cancel?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, Cancel"
+      });
+      if (confirm.isConfirmed) {
+        const res = await callApi({ action: "cancelRide", bookingId: activeBookingId, cancelledBy: "CUSTOMER" });
+        if (res.success) {
+          clearInterval(pollingTimer);
+          resetBookingScreen();
+          Swal.fire("Cancelled", "Your ride has been cancelled.", "success");
+        }
+      }
+    }
+
+    // ==================== POST-RIDE PAYMENT & RATING ====================
+    async function handleRideCompletedFlow(booking) {
+      if (booking.paymentStatus !== "PAID") {
+        const payChoice = await Swal.fire({
+          title: `Ride Completed! 🎉`,
+          html: `Total Fare: <h2>₹${booking.fare}</h2><p>Select Payment Confirmation:</p>`,
+          showDenyButton: true,
+          confirmButtonText: "💳 Paid Online (UPI/Card)",
+          denyButtonText: "💵 Paid Cash to Driver",
+          allowOutsideClick: false
+        });
+
+        const method = payChoice.isConfirmed ? "ONLINE" : "CASH";
+        await callApi({
+          action: "savePayment",
+          bookingId: booking.bookingId,
+          method: method,
+          transactionId: method + "_" + Date.now()
+        });
+      }
+
+      const { value: ratingData } = await Swal.fire({
+        title: "Rate your Captain ⭐",
+        html: `
+          <select id="swalStars" class="form-select mb-2">
+            <option value="5">⭐⭐⭐⭐⭐ (5 - Excellent)</option>
+            <option value="4">⭐⭐⭐⭐ (4 - Good)</option>
+            <option value="3">⭐⭐⭐ (3 - Average)</option>
+            <option value="2">⭐⭐ (2 - Poor)</option>
+            <option value="1">⭐ (1 - Bad)</option>
+          </select>
+          <textarea id="swalReview" class="form-control" placeholder="Write a quick review (optional)"></textarea>
+        `,
+        confirmButtonText: "Submit Rating",
+        preConfirm: () => ({
+          stars: document.getElementById("swalStars").value,
+          review: document.getElementById("swalReview").value
+        })
+      });
+
+      if (ratingData && booking.driver) {
+        await callApi({
+          action: "submitRating",
+          bookingId: booking.bookingId,
+          customerId: currentUser.customerId,
+          driverId: booking.driver.driverId,
+          stars: ratingData.stars,
+          review: ratingData.review
+        });
+        Swal.fire("Thank You!", "Your feedback helps us improve.", "success");
+      }
+    }
+
+    // ==================== HISTORY & COMPLAINTS ====================
+    async function loadCustomerHistory() {
+      const container = document.getElementById("historyListContainer");
+      container.innerHTML = `<div class="text-center py-3"><div class="spinner-border text-warning"></div></div>`;
+
+      const res = await callApi({ action: "getCustomerBookings", customerId: currentUser.customerId });
+      if (!res.success || !res.data || res.data.length === 0) {
+        container.innerHTML = `<div class="card-box text-center text-muted">No rides found yet. Book your first ride!</div>`;
+        return;
+      }
+
+      container.innerHTML = res.data.map(r => `
+        <div class="card-box">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-bold small text-muted">${r.bookingId}</span>
+            <span class="status-badge st-${r.status.split('_')[0]}">${r.status}</span>
+          </div>
+          <div class="small mb-1"><i class="fas fa-circle text-success me-1"></i> ${r.pickup}</div>
+          <div class="small mb-2"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${r.drop}</div>
+          <div class="d-flex justify-content-between border-top pt-2 small">
+            <span>${r.vehicleType} • ${r.distanceKm} KM</span>
+            <span class="fw-bold fs-6">₹${r.fare} <span class="badge bg-light text-dark border">${r.paymentStatus}</span></span>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    async function handleComplaintSubmit(e) {
+      e.preventDefault();
+      Swal.showLoading();
+      const res = await callApi({
+        action: "submitComplaint",
+        bookingId: document.getElementById("compBookingId").value,
+        userId: currentUser.customerId,
+        userType: "CUSTOMER",
+        subject: document.getElementById("compSubject").value,
+        description: document.getElementById("compDesc").value
+      });
+      if (res.success) {
+        e.target.reset();
+        Swal.fire("Submitted", res.message, "success");
+      } else {
+        Swal.fire("Error", res.message, "error");
+      }
+    }
+  </script>
+</body>
+</html>
