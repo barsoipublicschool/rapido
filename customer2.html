@@ -58,6 +58,15 @@
       overflow: hidden; border: 2px solid #e5e7eb; position: relative; z-index: 1;
     }
 
+    /* Satellite View Toggle Button on Map */
+    .map-style-toggle {
+      position: absolute; top: 12px; right: 12px; z-index: 1000;
+      background: #fff; color: #111827; border: 2px solid #d1d5db;
+      border-radius: 8px; padding: 5px 10px; font-size: 0.75rem; font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer;
+    }
+    .map-style-toggle:hover { background: #fef9c3; border-color: var(--primary-dark); }
+
     .loc-input-group { position: relative; margin-bottom: 10px; }
     .loc-input-group input {
       padding-left: 38px; padding-right: 40px; border-radius: 12px;
@@ -185,8 +194,10 @@
     <!-- ==================== 2. HOME / BOOKING & LIVE RIDE SECTION ==================== -->
     <div id="homeSection" class="hidden-section">
       
-      <!-- MAP VIEW -->
-      <div id="mapContainer" class="mb-3"></div>
+      <!-- MAP VIEW WITH SATELLITE TOGGLE BUTTON -->
+      <div id="mapContainer" class="mb-3">
+        <button type="button" class="map-style-toggle" id="mapToggleBtn" onclick="toggleMapLayer()"><i class="fas fa-layer-group me-1"></i> Satellite</button>
+      </div>
 
       <!-- ACTIVE RIDE TRACKING CARD -->
       <div id="activeRideCard" class="card-box border-warning border-2 hidden-section">
@@ -334,6 +345,9 @@
     let appFares = [];
     let selectedVehicle = null;
     let mapInstance = null;
+    let standardTileLayer = null;
+    let satelliteTileLayer = null;
+    let isSatelliteView = false;
     let pickupCoords = null;
     let dropCoords = null;
     let routeStats = { distanceKm: 0, durationMin: 0 };
@@ -482,13 +496,26 @@
       }
     }
 
-    // ==================== MAP, DRAGGABLE MARKERS & LIVE DRIVERS ====================
+    // ==================== GOOGLE MAPS LIKE STYLE & SATELLITE TOGGLE ====================
     function initMap() {
       if (mapInstance) return;
-      mapInstance = L.map("mapContainer").setView([CONFIG.DEFAULT_CENTER.lat, CONFIG.DEFAULT_CENTER.lng], 14);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap"
-      }).addTo(mapInstance);
+      mapInstance = L.map("mapContainer", { zoomControl: false }).setView([CONFIG.DEFAULT_CENTER.lat, CONFIG.DEFAULT_CENTER.lng], 14);
+      L.control.zoom({ position: 'topleft' }).addTo(mapInstance);
+
+      // Google Maps-like Clean Light Tiles (CartoDB Positron)
+      standardTileLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        attribution: "© OpenStreetMap contributors, © CARTO",
+        maxZoom: 19
+      });
+
+      // Esri World Imagery (Satellite View)
+      satelliteTileLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        attribution: "Tiles © Esri",
+        maxZoom: 19
+      });
+
+      // Add standard Google Maps-like style by default
+      standardTileLayer.addTo(mapInstance);
 
       // Default pickup marker set so user can drag immediately even if GPS is slow
       pickupCoords = { lat: CONFIG.DEFAULT_CENTER.lat, lng: CONFIG.DEFAULT_CENTER.lng };
@@ -496,6 +523,21 @@
 
       detectCurrentLocation(false);
       startAvailableDriversPolling();
+    }
+
+    function toggleMapLayer() {
+      const btn = document.getElementById("mapToggleBtn");
+      if (isSatelliteView) {
+        mapInstance.removeLayer(satelliteTileLayer);
+        standardTileLayer.addTo(mapInstance);
+        isSatelliteView = false;
+        btn.innerHTML = '<i class="fas fa-layer-group me-1"></i> Satellite';
+      } else {
+        mapInstance.removeLayer(standardTileLayer);
+        satelliteTileLayer.addTo(mapInstance);
+        isSatelliteView = true;
+        btn.innerHTML = '<i class="fas fa-map me-1"></i> Standard Map';
+      }
     }
 
     function detectCurrentLocation(force = false) {
