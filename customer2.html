@@ -67,6 +67,57 @@
     }
     .map-style-toggle:hover { background: #fef9c3; border-color: var(--primary-dark); }
 
+    /* Select on Map Pill Button below Drop */
+    .select-on-map-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: #fff; color: var(--dark); border: 1.5px solid #d1d5db;
+      border-radius: 999px; padding: 7px 14px; font-size: 0.84rem; font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05); cursor: pointer; margin-bottom: 10px;
+    }
+    .select-on-map-btn:hover { background: #fefce8; border-color: var(--primary-dark); }
+
+    /* Fullscreen Drop Picker Overlay */
+    .drop-picker-modal {
+      position: fixed; inset: 0; background: #fff; z-index: 2000;
+      display: flex; flex-direction: column;
+    }
+    .drop-picker-top {
+      padding: 12px 14px; background: #fff; border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center; gap: 10px; z-index: 2010;
+    }
+    .drop-picker-map-wrap {
+      position: relative; flex: 1; width: 100%; overflow: hidden;
+    }
+    #dropPickerMap { width: 100%; height: 100%; }
+    .center-drop-pin {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -100%);
+      z-index: 1500; pointer-events: none; text-align: center;
+    }
+    .center-drop-pin .pin-head {
+      background: #ef4444; color: #fff; width: 40px; height: 40px;
+      border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+      display: flex; align-items: center; justify-content: center;
+      border: 3px solid #fff; box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+    }
+    .center-drop-pin .pin-head i { transform: rotate(45deg); font-size: 1rem; }
+    .center-drop-pin .pin-dot {
+      width: 10px; height: 10px; background: #2563eb; border: 2px solid #fff;
+      border-radius: 50%; margin: 4px auto 0; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+    .drop-picker-sheet {
+      background: #fff; border-top-left-radius: 20px; border-top-right-radius: 20px;
+      padding: 16px; box-shadow: 0 -6px 24px rgba(0,0,0,0.12); z-index: 2010;
+    }
+    .drop-addr-box {
+      border: 1.5px solid #e5e7eb; border-radius: 14px; padding: 12px;
+      display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; background: #fafafa;
+    }
+    .drop-red-ring {
+      width: 14px; height: 14px; border: 3.5px solid #ef4444;
+      border-radius: 50%; margin-top: 4px; flex-shrink: 0; background: #fff;
+    }
+
     .loc-input-group { position: relative; margin-bottom: 10px; }
     .loc-input-group input {
       padding-left: 38px; padding-right: 40px; border-radius: 12px;
@@ -264,6 +315,14 @@
           <div id="dropSuggestions" class="suggestions-box"></div>
         </div>
 
+        <!-- Select on Map button directly below Drop -->
+        <div>
+          <button type="button" class="select-on-map-btn" onclick="openDropOnMapPicker()">
+            <i class="fas fa-map-marker-alt text-danger"></i>
+            <span>Select on map</span>
+          </button>
+        </div>
+
         <!-- Route Summary & Vehicle Selection -->
         <div id="fareEstimateSection" class="hidden-section mt-3">
           <div class="d-flex justify-content-between bg-light p-2 rounded-3 small fw-bold mb-2">
@@ -327,6 +386,41 @@
 
   </div>
 
+  <!-- SELECT DROP ON MAP OVERLAY -->
+  <div id="dropPickerModal" class="drop-picker-modal hidden-section">
+    <div class="drop-picker-top">
+      <button type="button" class="btn btn-light rounded-circle border" style="width:38px;height:38px;" onclick="closeDropOnMapPicker()">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <h5 class="fw-bold mb-0">Drop</h5>
+    </div>
+
+    <div class="drop-picker-map-wrap">
+      <div id="dropPickerMap"></div>
+      <div class="center-drop-pin">
+        <div class="pin-head"><i class="fas fa-map-marker-alt"></i></div>
+        <div class="pin-dot"></div>
+      </div>
+    </div>
+
+    <div class="drop-picker-sheet">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="fw-bold mb-0">Select your location</h6>
+        <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 fw-bold" onclick="focusDropPickerInput()">Change</button>
+      </div>
+
+      <div class="drop-addr-box">
+        <span class="drop-red-ring"></span>
+        <div>
+          <div class="fw-bold" id="pickerPlaceTitle">Move map to choose drop</div>
+          <div class="small text-muted" id="pickerPlaceSubtitle">Fetching address...</div>
+        </div>
+      </div>
+
+      <button type="button" class="btn-brand" onclick="confirmDropOnMap()">Select Drop</button>
+    </div>
+  </div>
+
   <!-- BOTTOM NAVIGATION BAR -->
   <nav class="bottom-nav hidden-section" id="bottomNav">
     <button class="nav-item-btn active" id="navHome" onclick="switchPage('home')"><i class="fas fa-motorcycle"></i><span>Book Ride</span></button>
@@ -357,6 +451,12 @@
     let availableDriversInterval = null;
     let generatedOtp = null;
     let isInitialLocationSet = false;
+
+    // Drop on Map Picker state
+    let pickerMap = null;
+    let pickerTempCoords = null;
+    let pickerTempAddress = "";
+    let pickerGeocodeTimer = null;
 
     document.addEventListener("DOMContentLoaded", async () => {
       await loadAppConfig();
@@ -502,22 +602,18 @@
       mapInstance = L.map("mapContainer", { zoomControl: false }).setView([CONFIG.DEFAULT_CENTER.lat, CONFIG.DEFAULT_CENTER.lng], 14);
       L.control.zoom({ position: 'topleft' }).addTo(mapInstance);
 
-      // Original Clean OpenStreetMap Standard Tiles
       standardTileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap",
         maxZoom: 19
       });
 
-      // Esri World Imagery (Satellite View)
       satelliteTileLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
         attribution: "Tiles © Esri",
         maxZoom: 19
       });
 
-      // Add standard OpenStreetMap tiles by default
       standardTileLayer.addTo(mapInstance);
 
-      // Default pickup marker set so user can drag immediately even if GPS is slow
       pickupCoords = { lat: CONFIG.DEFAULT_CENTER.lat, lng: CONFIG.DEFAULT_CENTER.lng };
       setMapMarker("pickup", pickupCoords.lat, pickupCoords.lng, "Pickup Location (Drag me)");
 
@@ -537,6 +633,76 @@
         satelliteTileLayer.addTo(mapInstance);
         isSatelliteView = true;
         btn.innerHTML = '<i class="fas fa-map me-1"></i> Standard Map';
+      }
+    }
+
+    // ==================== SELECT DROP ON MAP MODAL ====================
+    function openDropOnMapPicker() {
+      document.getElementById("dropPickerModal").classList.remove("hidden-section");
+      const startPt = dropCoords || pickupCoords || CONFIG.DEFAULT_CENTER;
+      pickerTempCoords = { lat: startPt.lat, lng: startPt.lng };
+
+      if (!pickerMap) {
+        pickerMap = L.map("dropPickerMap", { zoomControl: false }).setView([startPt.lat, startPt.lng], 16);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap",
+          maxZoom: 19
+        }).addTo(pickerMap);
+
+        pickerMap.on("moveend", () => {
+          const c = pickerMap.getCenter();
+          pickerTempCoords = { lat: c.lat, lng: c.lng };
+          clearTimeout(pickerGeocodeTimer);
+          document.getElementById("pickerPlaceTitle").innerText = "Updating location...";
+          document.getElementById("pickerPlaceSubtitle").innerText = `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`;
+          pickerGeocodeTimer = setTimeout(() => updatePickerAddress(c.lat, c.lng), 350);
+        });
+      } else {
+        pickerMap.setView([startPt.lat, startPt.lng], 16);
+        setTimeout(() => pickerMap.invalidateSize(), 150);
+      }
+
+      updatePickerAddress(startPt.lat, startPt.lng);
+    }
+
+    function closeDropOnMapPicker() {
+      document.getElementById("dropPickerModal").classList.add("hidden-section");
+    }
+
+    function focusDropPickerInput() {
+      closeDropOnMapPicker();
+      const inp = document.getElementById("dropInput");
+      inp.focus();
+      inp.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    async function updatePickerAddress(lat, lng) {
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        const d = await r.json();
+        const parts = d.display_name ? d.display_name.split(",").map(s => s.trim()) : [];
+        const title = parts[0] || `Dropped Pin (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+        const subtitle = parts.slice(1, 4).join(", ") || "Selected on map";
+        pickerTempAddress = parts.slice(0, 3).join(", ") || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        document.getElementById("pickerPlaceTitle").innerText = title;
+        document.getElementById("pickerPlaceSubtitle").innerText = subtitle;
+      } catch {
+        pickerTempAddress = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        document.getElementById("pickerPlaceTitle").innerText = "Selected Location";
+        document.getElementById("pickerPlaceSubtitle").innerText = pickerTempAddress;
+      }
+    }
+
+    function confirmDropOnMap() {
+      if (!pickerTempCoords) return;
+      dropCoords = { lat: pickerTempCoords.lat, lng: pickerTempCoords.lng };
+      document.getElementById("dropInput").value = pickerTempAddress || `${dropCoords.lat.toFixed(4)}, ${dropCoords.lng.toFixed(4)}`;
+      closeDropOnMapPicker();
+
+      if (mapInstance) {
+        setMapMarker("drop", dropCoords.lat, dropCoords.lng, "Drop Destination (Drag me)");
+        mapInstance.setView([dropCoords.lat, dropCoords.lng], 15);
+        if (pickupCoords && dropCoords) calculateRouteAndFares();
       }
     }
 
