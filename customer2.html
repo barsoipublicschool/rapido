@@ -144,6 +144,7 @@
     }
     .vehicle-card.active { border-color: var(--dark); background: #fefce8; }
     .vehicle-card i { font-size: 1.8rem; color: var(--dark); margin-bottom: 5px; }
+    .vehicle-card svg { color: var(--dark); margin-bottom: 5px; }
     .fare-badge { font-size: 1.15rem; font-weight: 800; color: var(--dark); }
 
     .otp-pill {
@@ -458,6 +459,33 @@
     let pickerTempAddress = "";
     let pickerGeocodeTimer = null;
 
+    // ==================== VEHICLE ICON HELPER (BIKE, SCOOTER, E-RIKSHAW, AUTO, CAR) ====================
+    function getVehicleSymbolHtml(vehicleType, size = 30, isMapPin = false) {
+      const t = (vehicleType || "").toLowerCase().trim();
+      const extraStyle = isMapPin ? "display:block;" : "margin-bottom:5px;";
+
+      // Car / Cab / Sedan / SUV
+      if (t.includes("car") || t.includes("cab") || t.includes("sedan") || t.includes("suv") || t.includes("taxi")) {
+        return `<i class="fas fa-car-side" style="${isMapPin ? 'font-size:15px;' : ''}"></i>`;
+      }
+
+      // E-Rikshaw / Rickshaw / Auto / Toto
+      if (t.includes("rikshaw") || t.includes("rickshaw") || t.includes("auto") || t.includes("toto") || t.includes("e-rik") || t.includes("erik")) {
+        const svgSize = isMapPin ? 18 : size;
+        return `<svg viewBox="0 0 64 64" width="${svgSize}" height="${svgSize}" fill="currentColor" style="${extraStyle}" aria-hidden="true">
+          <path d="M14 14h28c6.6 0 12 5.4 12 12v14h4v6h-6.2c-.9 3.4-4 6-7.8 6s-6.9-2.6-7.8-6H23.8c-.9 3.4-4 6-7.8 6s-6.9-2.6-7.8-6H4v-8c0-3.3 2.7-6 6-6h2V16c0-1.1.9-2 2-2zm4 6v12h12V20H18zm18 0v12h12v-6c0-3.3-2.7-6-6-6h-6zM16 44c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm28 0c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4z"/>
+        </svg>`;
+      }
+
+      // Scooter / Scooty
+      if (t.includes("scoot")) {
+        return `<i class="fas fa-biking" style="${isMapPin ? 'font-size:15px;' : ''}"></i>`;
+      }
+
+      // Default: Bike / Motorcycle
+      return `<i class="fas fa-motorcycle" style="${isMapPin ? 'font-size:15px;' : ''}"></i>`;
+    }
+
     document.addEventListener("DOMContentLoaded", async () => {
       await loadAppConfig();
       const savedUser = localStorage.getItem("btx_customer");
@@ -723,12 +751,16 @@
       });
     }
 
-    function setMapMarker(type, lat, lng, title) {
+    function setMapMarker(type, lat, lng, title, vehicleType = "Bike") {
       const colors = { pickup: "#10b981", drop: "#ef4444", driver: "#facc15" };
       const icons = { pickup: "fa-dot-circle", drop: "fa-map-marker-alt", driver: "fa-motorcycle" };
       
+      const innerHtml = type === "driver"
+        ? getVehicleSymbolHtml(vehicleType, 18, true)
+        : `<i class="fas ${icons[type]} fs-6"></i>`;
+
       const customIcon = L.divIcon({
-        html: `<div style="background:${colors[type]};color:#111;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,0.45);cursor:grab;"><i class="fas ${icons[type]} fs-6"></i></div>`,
+        html: `<div style="background:${colors[type]};color:#111;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,0.45);cursor:grab;">${innerHtml}</div>`,
         className: "",
         iconSize: [38, 38],
         iconAnchor: [19, 19]
@@ -736,6 +768,7 @@
 
       if (markers[type]) {
         markers[type].setLatLng([lat, lng]);
+        if (type === "driver") markers[type].setIcon(customIcon);
         return;
       }
 
@@ -790,21 +823,23 @@
       markers.availableDrivers = [];
 
       if (res.success && res.data && Array.isArray(res.data)) {
-        document.getElementById("nearbyCapsCount").innerHTML = `<i class="fas fa-motorcycle"></i> ${res.data.length} Nearby`;
+        document.getElementById("nearbyCapsCount").innerHTML = `<i class="fas fa-location-arrow"></i> ${res.data.length} Nearby`;
         res.data.forEach(drv => {
           const lat = parseFloat(drv.lat);
           const lng = parseFloat(drv.lng);
           if (!isNaN(lat) && !isNaN(lng)) {
-            const isScooter = (drv.vehicle?.type || "").toLowerCase().includes("scoot");
+            const vType = drv.vehicle?.type || drv.vehicleType || "Bike";
+            const symbolHtml = getVehicleSymbolHtml(vType, 18, true);
+
             const driverIcon = L.divIcon({
-              html: `<div style="background:#111827;color:#facc15;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #facc15;box-shadow:0 3px 10px rgba(0,0,0,0.5);"><i class="fas ${isScooter ? 'fa-biking' : 'fa-motorcycle'}"></i></div>`,
+              html: `<div style="background:#111827;color:#facc15;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #facc15;box-shadow:0 3px 10px rgba(0,0,0,0.5);">${symbolHtml}</div>`,
               className: "",
               iconSize: [36, 36],
               iconAnchor: [18, 18]
             });
             const m = L.marker([lat, lng], { icon: driverIcon, zIndexOffset: 1000 })
               .addTo(mapInstance)
-              .bindPopup(`<b>🏍️ Captain: ${drv.name}</b><br/>Vehicle: ${drv.vehicle?.model || drv.vehicle?.type}<br/>Distance: ${drv.distanceKm} KM away`);
+              .bindPopup(`<b>Captain: ${drv.name}</b><br/>Vehicle: ${drv.vehicle?.model || vType} (${vType})<br/>Distance: ${drv.distanceKm} KM away`);
             markers.availableDrivers.push(m);
           }
         });
@@ -884,7 +919,10 @@
 
       const list = appFares.length > 0 ? appFares : [
         { vehicleType: "Bike", baseFare: 20, perKmRate: 8, minimumFare: 25, nightMultiplier: 1.2 },
-        { vehicleType: "Scooter", baseFare: 22, perKmRate: 9, minimumFare: 28, nightMultiplier: 1.2 }
+        { vehicleType: "Scooter", baseFare: 22, perKmRate: 9, minimumFare: 28, nightMultiplier: 1.2 },
+        { vehicleType: "E-Rikshaw", baseFare: 25, perKmRate: 10, minimumFare: 30, nightMultiplier: 1.2 },
+        { vehicleType: "Auto", baseFare: 30, perKmRate: 12, minimumFare: 35, nightMultiplier: 1.2 },
+        { vehicleType: "Car", baseFare: 40, perKmRate: 15, minimumFare: 50, nightMultiplier: 1.2 }
       ];
 
       list.forEach((v, idx) => {
@@ -895,7 +933,7 @@
         const card = document.createElement("div");
         card.className = "vehicle-card" + (idx === 0 ? " active" : "");
         card.innerHTML = `
-          <i class="fas ${v.vehicleType.toLowerCase().includes('scoot') ? 'fa-biking' : 'fa-motorcycle'}"></i>
+          ${getVehicleSymbolHtml(v.vehicleType, 30, false)}
           <div class="fw-bold">${v.vehicleType}</div>
           <div class="fare-badge">₹${fare}</div>
           <small class="text-muted">${isNight ? 'Night Rate' : 'Fastest'}</small>
@@ -1001,7 +1039,8 @@
           document.getElementById("callDriverBtn").href = "tel:" + b.driver.mobile;
 
           if (b.driver.lat && b.driver.lng) {
-            setMapMarker("driver", parseFloat(b.driver.lat), parseFloat(b.driver.lng), `Captain: ${b.driver.name}`);
+            const drvVType = b.driver.vehicle?.type || b.vehicleType || "Bike";
+            setMapMarker("driver", parseFloat(b.driver.lat), parseFloat(b.driver.lng), `Captain: ${b.driver.name}`, drvVType);
             document.getElementById("driverEtaText").innerText = b.status === "STARTED" ? "On the way to Drop" : "Arriving soon";
           }
         }
