@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RYZRIDE - Download Android App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary-blue: #087BFF;
+      --secondary-blue: #00B8F0;
+      --bg-black: #050505;
+      --card-bg: #101318;
+      --border-color: rgba(8, 123, 255, 0.25);
+      --white: #FFFFFF;
+      --muted: #B6C2D1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--bg-black);
+      color: var(--white);
+      line-height: 1.6;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(circle at top right, rgba(0, 184, 240, 0.16), transparent 45%),
+        radial-gradient(circle at bottom left, rgba(8, 123, 255, 0.18), transparent 45%);
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+
+    .hero {
+      background: linear-gradient(145deg, #0b111a 0%, #050505 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 32px 22px;
+      text-align: center;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      background: rgba(8, 123, 255, 0.16);
+      color: var(--secondary-blue);
+      border: 1px solid rgba(0, 184, 240, 0.35);
+      margin-bottom: 14px;
+    }
+
+    .brand-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: clamp(32px, 7vw, 46px);
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .tagline {
+      font-size: 16px;
+      color: var(--white);
+      font-weight: 500;
+      margin-top: 4px;
+    }
+
+    .subtext {
+      color: var(--muted);
+      font-size: 14px;
+      max-width: 540px;
+      margin: 14px auto 24px;
+    }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
+      color: var(--white);
+      text-decoration: none;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 15px 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(8, 123, 255, 0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(0, 184, 240, 0.45);
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .meta-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .meta-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .meta-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--white);
+      margin-top: 2px;
+    }
+
+    .section {
+      margin-top: 22px;
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 24px 22px;
+    }
+
+    .section h2 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 19px;
+      margin-bottom: 14px;
+      color: var(--secondary-blue);
+    }
+
+    .steps {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+
+    .steps li {
+      background: rgba(255, 255, 255, 0.03);
+      border-left: 3px solid var(--primary-blue);
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .steps strong {
+      color: var(--white);
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 26px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 560px) {
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <div class="badge">ANDROID DIRECT INSTALL (APK)</div>
+      <h1 class="brand-title">RYZRIDE</h1>
+      <p class="tagline">Go Anywhere, Anytime..</p>
+      <p class="subtext">
+        अब आपके शहर में तेज़, किफ़ायती और भरोसेमंद Bike Taxi बुकिंग। नीचे दिए गए बटन से RYZRIDE Android ऐप डाउनलोड करें।
+      </p>
+
+      <!-- अपनी APK का direct download link यहाँ डालें -->
+      <a
+        id="apkDownloadLink"
+        class="download-btn"
+        href="https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/v1.0.0/ryzride.apk"
+        download="RYZRIDE.apk"
+      >
+        <span>Download RYZRIDE APK</span>
+      </a>
+
+      <div class="meta-grid">
+        <div class="meta-box">
+          <div class="meta-label">Version</div>
+          <div class="meta-value">v1.0.0</div>
+        </div>
+        <div class="meta-box">
+          <div class="meta-label">Platform</div>
+          <div class="meta-value">Android (APK)</div>
+        </div>
+        <div class="meta-box">
+          <div class="meta-label">File Size</div>
+          <div class="meta-value" id="apkSizeText">अपना Size लिखें</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>ऐप कैसे इंस्टॉल करें? (How to Install)</h2>
+      <ul class="steps">
+        <li><strong>Step 1:</strong> ऊपर <strong>Download RYZRIDE APK</strong> बटन पर क्लिक करके फ़ाइल डाउनलोड करें।</li>
+        <li><strong>Step 2:</strong> डाउनलोड पूरी होने के बाद नोटिफिकेशन या <strong>Downloads</strong> फ़ोल्डर से <strong>RYZRIDE.apk</strong> पर टैप करें।</li>
+        <li><strong>Step 3:</strong> यदि फोन <strong>Install unknown apps</strong> की अनुमति मांगे, तो ब्राउज़र के लिए Allow करें और फिर <strong>Install</strong> पर टैप करें।</li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      &copy; 2026 RYZRIDE. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
